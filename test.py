@@ -1,43 +1,76 @@
 
-from flask import Flask,request,jsonify,current_app,make_response
-from werkzeug.routing import BaseConverter
+# from flask import Flask,request,jsonify,current_app,make_response
+# from werkzeug.routing import BaseConverter
+# from flask_sqlalchemy import SQLAlchemy
+#
+# app = Flask(__name__)
+#
+# class RegexConverter(BaseConverter):
+#     def __init__(self,url_map,*args):
+#         super(RegexConverter,self).__init__(url_map)
+#         self.regex = args[0]
+#
+# app.url_map.converters['re'] = RegexConverter
+#
+# app.config["SQLALCHEMY_DATABASE_URI"] = 'mysql://root@mysql@127.0.0.1:3306/test2'
+# app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+#
+# db = SQLAlchemy(app)
+#
+# class Author(db.Model):
+#     __tablename__ = "author"
+#     id = db.Column(db.Integer,primary_key=True)
+#     name = db.Column(db.String(32),unique = True)
+#     books = db.relationship("Book",backref = 'author')
+#     def __repr__(self):
+#         return "Author:%s"%self.name
+#
+# class Book(db.Model):
+#     __table__ = "books"
+#     id = db.Column(db.Integer,primary_key = True)
+#     name = db.Column(db.String(32))
+#     au_book = db.Column(db.Integer,db.ForeignKey('author.id'))
+#     def __repr__(self):
+#         return "Book:%s,%s"%(self.id,self.name)
+#
+# if __name__ == "__main__":
+#     db.drop_all()
+#     db.create_all()
+#     app.run(debug = True)
+    
 
-app = Flask(__name__)
-
-class RegexConverter(BaseConverter):
-    def __init__(self,url_map,*args):
-        super(RegexConverter,self).__init__(url_map)
-        self.regex = args[0]
-
-app.url_map.converters['re'] = RegexConverter
-
-@app.route('/user/<re("[0-9]{3}"):user_id>')
-def user_info(user_id):
-    return "user_id 为%s"%user_id
-
-@app.route('/users/<int:user_id>')
-def func(user_id):
-    json_data = {'name':'bob'}
-    return jsonify(json_data)
-    # return "hello world"
-
-@app.route('/demo3')
-def demo3():
-    json_dict = {
-        "user_id": 10,
-        "user_name": "laowang"
-    }
-    return jsonify(json_dict)
-
-if __name__ == "__main__":
-    app.run()
 
 
-from flask import Blueprint,render_template
+
+
+
+# @app.route('/user/<re("[0-9]{3}"):user_id>')
+# def user_info(user_id):
+#     return "user_id 为%s"%user_id
+#
+# @app.route('/users/<int:user_id>')
+# def func(user_id):
+#     json_data = {'name':'bob'}
+#     return jsonify(json_data)
+#     # return "hello world"
+#
+# @app.route('/demo3')
+# def demo3():
+#     json_dict = {
+#         "user_id": 10,
+#         "user_name": "laowang"
+#     }
+#     return jsonify(json_dict)
+#
+# if __name__ == "__main__":
+#     app.run()
+#
+#
+from flask import Blueprint,render_template,request,make_response,jsonify,current_app
 import re
 import random
 pass_blu = Blueprint("passport",__name__,url_prefix = "/passport")
-from . import views
+# from . import views
 
 
 @pass_blu.route('/image_code')
@@ -157,68 +190,152 @@ if __name__ == "__main__":
     time.sleep(1)
     print("over")
 
+import flask_appbuilder
+@manager.option('-n','-name',dest='name')
+@manager.option('-p','-password',data = 'password')
+def createsuperuser(name,password):
+    if not all([name,password]):
+        return "参数不足"
+    user = User()
+    user.name = name
+    user.password = password
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except Exception as e:
+        print(e)
+        db.session.rollback()
 
-import time
+@admin_blu.route('/login',methods = ["POST","GET"])
+def admin_login():
+    if request_login():
+        return render_template('admin/login.html')
+    username = request.form.get("username")
+    password = request.form.get("password")
+    if not all([username,password]):
+        return render_template('admin/login.html',errmsg = "参数不足")
+    try:
+        user = User.query.filter(User.mobile == username).first()
+    except Exception as e:
+        return render_template('admin/login.html',errmsg = '数据查询失败')
+    if not user:
+        return render_template('admin/login.html',errmsg = "用户不存在")
+    if not user.check_password(password):
+        return render_template('admin/login.html',errmsg = "用户权限错误")
+    session['user_id'] = user.id
+    session["nick_name"] = user.nick_name
+    session["mobile"] = user.mobile
+    session["is_admin"] = True
+    return "登录成功，需要跳转到主页"
 
-def show_info():
-    for i in range(5):
-        print("test:",i)
-        time.sleep(0.5)
-if __name__ == "__main__":
-    sub_thread = threading.Thread(target = show_info,deamon = True)
-    sub_thread.start()
-    time.sleep(1)
-    print("over")
+@admin.route('/news_review_detail')
+def news_review_detail():
+    news_id = request.args.get("news_id")
+    if not news_id:
+        return render_template('admin/news_review_detail.html',data = {"errmsg":"未查询到此新闻"})
+    try:
+        news = News.query.get(news_id)
+    except Exception as e:
+        current_app.logger.error(e)
+    if not news:
+        return render_template('admin/news_revice_detail.html',data = 'errmsg = "未查询到此新闻')
+    data = {'news':news.to_dict()}
+    return render_template('admin/news_review_detail.html',data = data)
+
+
+
+
+
 
 import threading
+threading.Thread()
+threading.current_thread()
+threading.enumerate()
+# import time
+# def count_time(func):
+#     def wrapper():
+#         start = time.time()
+#         func()
+#         end = time.time()
+#         print("共计执行：%s秒"%(end-start))
+#     return wrapper
+#
+# @count_time
+# def my_count():
+#     s = 0
+#     for i in range(1000000):
+#         s += 1
+#     print("sum:",s)
+# my_count = count_time(my_count)
+# # my_count()
+#
+# # 类属性可以使用 类对象 或 实例对象 访问
+# class Dog:
+#     type = "狗"  # 类属性
+#
+# dog1 = Dog()
+# dog1.name = "旺财"
+#
+# dog2 = Dog()
+# dog2.name = "来福"
+#
+# # 类属性  取值
+# print(Dog.type)  # 结果：狗
+# print(dog1.type)  # 结果：狗
+# print(dog2.type)  # 结果：狗
 
-class MyThread(threading.Thread):
-    def __init__(self,info1,info2):
-        super(MyThread,self).__init__()
-        self.info1 = info1
-        self.info2 = info2
-    def test1(self):
-        print(self.info1)
-    def test2(self):
-        print(self.info2)
-    def run(self):
-        self.test1()
-        self.test2()
-my_thread = MyThread("测试1","测试2")
-my_thread.start()
 
-import threading
-import time
-my_list = list()
-def write_data():
-    for i in range(5):
-        my_list.append(i)
-        time.sleep(0.1)
-    print("write_data:",my_list)
-def read_data():
-    print("read_data:",my_list)
-if __name__ == "__main__":
-    write_thread = threading.Thread(target = write_data)
-    read_thread = threading.Thread(target = read_data)
-    write_thread.start()
-    write_thread.join()
-    write_thread.join()
-    read_thread.start()
+def logging(level):
+    def wrapper(func):
+        def inner_wrapper(*args, **kwargs):
+            print("[{level}]: enter function {func}()".format(
+                level=level,
+                func=func.__name__))
+            return func(*args, **kwargs)
+        return inner_wrapper
+    return wrapper
+# logging(level="INFO")(say)
+# @logging(level='INFO')
+# def say(something):
+#     print("say {}!".format(something))
+# say('hello')
 
-import multiprocessing
-import time
 
-def run_proc():
-    while True:
-        print("---2---")
-        time.sleep(1)
-if __name__ == "__main__":
-    sub_process = multiprocessing.Process(target = proc)
-    sub_process.start()
-    while True:
-        print("---1---")
-        time.sleep(1)
-        
+def func1(num):
+    def func2(a):
+        print(num,"333")
+        print(a)
+        def func3(*args):
+            a("Q")
+            print("hello world",a,a.__name__)
+        return func3
+    return func2
+
+# @func1(num = 3)
+# def Func(c):
+#     print("Good {}".format(c))
+
+# Func("china")
+
+sum = lambda arg1,arg2:arg1 + arg2
+print("Value of total1:{}".format(sum(10,20)))
+
+def fun(a,b,opt):
+    print("a = {}".format(a))
+    print("b = {}".format(b))
+    print("result = {}".format(opt))
+fun(1,2,lambda x,y:x+y)
+
+
+stus = [
+    {"name": "zhangsan", "age": 18},
+    {"name": "lisi", "age": 19},
+    {"name": "wangwu", "age": 17}
+]
+stus.sort(key = lambda x : x["name"])
+print(stus)
+
+
 
 
 
